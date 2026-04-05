@@ -1,14 +1,42 @@
 export default function Navbar() {
   return (
-    <nav className="absolute top-0 left-0 right-0 z-50 flex items-center justify-between px-8 py-5">
+    <nav
+      id="home"
+      className="absolute top-0 left-0 right-0 z-50 flex items-center justify-between px-8 py-5"
+    >
       {/* Logo */}
       <div className="flex items-center gap-2">
         <div className="w-8 h-8 relative">
-          <svg viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <svg
+            viewBox="0 0 32 32"
+            fill="none"
+            xmlns="http://www.w3.org/2000/svg"
+          >
             <rect x="0" y="0" width="14" height="14" fill="#c9a84c" />
-            <rect x="18" y="0" width="14" height="14" fill="#c9a84c" opacity="0.6" />
-            <rect x="0" y="18" width="14" height="14" fill="#c9a84c" opacity="0.6" />
-            <rect x="18" y="18" width="14" height="14" fill="#c9a84c" opacity="0.3" />
+            <rect
+              x="18"
+              y="0"
+              width="14"
+              height="14"
+              fill="#c9a84c"
+              opacity="0.6"
+            />
+            <rect
+              x="0"
+              y="18"
+              width="14"
+              height="14"
+              fill="#c9a84c"
+              opacity="0.6"
+            />
+            <rect
+              x="18"
+              y="18"
+              width="14"
+              height="14"
+              fill="#c9a84c"
+              opacity="0.3"
+            />
           </svg>
         </div>
         <span className="text-xl font-semibold tracking-tight">
@@ -20,19 +48,21 @@ export default function Navbar() {
       {/* Nav Links */}
       <div className="flex items-center gap-8">
         <a
-          href="#"
+          href="#home"
           className="text-sm text-white hover:text-[#c9a84c] transition-colors duration-200 font-medium"
         >
           Home
         </a>
         <a
-          href="#"
+          href="#about"
           className="text-sm text-gray-300 hover:text-[#c9a84c] transition-colors duration-200 font-medium"
         >
           About
         </a>
         <a
-          href="#"
+          href="https://github.com/CyberGod6241/Pixel-Guard"
+          target="_blank"
+          rel="noopener noreferrer"
           aria-label="GitHub"
           className="text-gray-300 hover:text-[#c9a84c] transition-colors duration-200"
         >

@@ -1,4 +1,4 @@
-export default function Hero() {
+export default function Hero({ Link }) {
   return (
     <section className="relative min-h-screen flex flex-col items-center justify-center overflow-hidden">
       {/* Background gradient layers */}
@@ -13,11 +13,20 @@ export default function Hero() {
           xmlns="http://www.w3.org/2000/svg"
         >
           {/* Far mountains */}
-          <polygon points="0,500 200,200 400,320 600,150 800,280 1000,160 1200,260 1440,180 1440,500" fill="#0f2744" />
+          <polygon
+            points="0,500 200,200 400,320 600,150 800,280 1000,160 1200,260 1440,180 1440,500"
+            fill="#0f2744"
+          />
           {/* Mid mountains */}
-          <polygon points="0,500 150,300 300,380 500,220 700,340 900,200 1100,300 1300,240 1440,280 1440,500" fill="#0d2240" />
+          <polygon
+            points="0,500 150,300 300,380 500,220 700,340 900,200 1100,300 1300,240 1440,280 1440,500"
+            fill="#0d2240"
+          />
           {/* Front mountains */}
-          <polygon points="0,500 100,380 280,420 450,320 620,400 800,300 980,380 1150,340 1300,380 1440,350 1440,500" fill="#0b1c36" />
+          <polygon
+            points="0,500 100,380 280,420 450,320 620,400 800,300 980,380 1150,340 1300,380 1440,350 1440,500"
+            fill="#0b1c36"
+          />
         </svg>
       </div>
 
@@ -50,7 +59,12 @@ export default function Hero() {
 
       {/* Golden wave / data visualization line */}
       <div className="absolute bottom-[30%] left-0 right-0 h-24 overflow-hidden opacity-30">
-        <svg viewBox="0 0 1440 96" fill="none" xmlns="http://www.w3.org/2000/svg" className="w-full">
+        <svg
+          viewBox="0 0 1440 96"
+          fill="none"
+          xmlns="http://www.w3.org/2000/svg"
+          className="w-full"
+        >
           <path
             d="M0 48 C180 10, 360 86, 540 48 S900 10, 1080 48 S1350 86, 1440 48"
             stroke="#c9a84c"
@@ -80,14 +94,18 @@ export default function Hero() {
 
         {/* CTA Buttons */}
         <div className="flex flex-col sm:flex-row gap-4 items-center">
-          <button className="flex items-center gap-2 bg-[#c9a84c] hover:bg-[#b8963e] text-[#0a1628] font-bold px-8 py-3.5 rounded-md text-sm uppercase tracking-widest transition-all duration-200 shadow-lg shadow-[#c9a84c]/20 hover:shadow-[#c9a84c]/40 hover:scale-105 min-w-[200px] justify-center">
-            <LockIcon />
-            Encode Message
-          </button>
-          <button className="flex items-center gap-2 border border-[#c9a84c] hover:bg-[#c9a84c]/10 text-[#c9a84c] font-bold px-8 py-3.5 rounded-md text-sm uppercase tracking-widest transition-all duration-200 min-w-[200px] justify-center hover:scale-105">
-            <UnlockIcon />
-            Decode Image
-          </button>
+          <Link to="/encode">
+            <button className="flex items-center gap-2 bg-[#c9a84c] hover:bg-[#b8963e] text-[#0a1628] font-bold px-8 py-3.5 rounded-md text-sm uppercase tracking-widest transition-all duration-200 shadow-lg shadow-[#c9a84c]/20 hover:shadow-[#c9a84c]/40 hover:scale-105 min-w-[200px] justify-center">
+              <LockIcon />
+              Encode Message
+            </button>
+          </Link>
+          <Link to="/decode">
+            <button className="flex items-center gap-2 border border-[#c9a84c] hover:bg-[#c9a84c]/10 text-[#c9a84c] font-bold px-8 py-3.5 rounded-md text-sm uppercase tracking-widest transition-all duration-200 min-w-[200px] justify-center hover:scale-105">
+              <UnlockIcon />
+              Decode Image
+            </button>
+          </Link>
         </div>
       </div>
 
@@ -106,16 +124,38 @@ export default function Hero() {
 
 function LockIcon() {
   return (
-    <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
-      <path strokeLinecap="round" strokeLinejoin="round" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+    <svg
+      xmlns="http://www.w3.org/2000/svg"
+      className="w-4 h-4"
+      fill="none"
+      viewBox="0 0 24 24"
+      stroke="currentColor"
+      strokeWidth={2.5}
+    >
+      <path
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"
+      />
     </svg>
   );
 }
 
 function UnlockIcon() {
   return (
-    <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
-      <path strokeLinecap="round" strokeLinejoin="round" d="M8 11V7a4 4 0 118 0m-4 8v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2z" />
+    <svg
+      xmlns="http://www.w3.org/2000/svg"
+      className="w-4 h-4"
+      fill="none"
+      viewBox="0 0 24 24"
+      stroke="currentColor"
+      strokeWidth={2.5}
+    >
+      <path
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        d="M8 11V7a4 4 0 118 0m-4 8v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2z"
+      />
     </svg>
   );
 }

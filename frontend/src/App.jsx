@@ -1,11 +1,10 @@
 import { useEffect } from "react";
 import axios from "axios";
-import Navbar from "./components/Navbar";
-import Hero from "./components/Hero";
-import HowItWorks from "./components/HowItWorks";
-import About from "./components/About";
-import FAQ from "./components/FAQ";
-import Footer from "./components/Footer";
+import HomePage from "./HomePage";
+import Encode from "./Encode/Encode";
+import Decode from "./Decode/Decode";
+import { Route, Routes } from "react-router-dom";
+import { Link } from "react-router-dom";
 
 function App() {
   const fetchUsers = async () => {
@@ -23,12 +22,11 @@ function App() {
 
   return (
     <div className="min-h-screen bg-[#07101f] text-white font-sans">
-      <Navbar />
-      <Hero />
-      <HowItWorks />
-      <About />
-      <FAQ />
-      <Footer />
+      <Routes>
+        <Route path="/" element={<HomePage Link={Link} />} />
+        <Route path="/encode" element={<Encode />} />
+        <Route path="/decode" element={<Decode />} />
+      </Routes>
     </div>
   );
 }
