@@ -1,8 +1,8 @@
 import { useEffect } from "react";
 import axios from "axios";
 import HomePage from "./HomePage";
-import Encode from "./Encode/Encode";
-import Decode from "./Decode/Decode";
+import EncodePage from "./Encode/EncodePage";
+import DecodePage from "./Decode/DecodePage";
 import { Route, Routes } from "react-router-dom";
 import { Link } from "react-router-dom";
 
@@ -24,8 +24,8 @@ function App() {
     <div className="min-h-screen bg-[#07101f] text-white font-sans">
       <Routes>
         <Route path="/" element={<HomePage Link={Link} />} />
-        <Route path="/encode" element={<Encode />} />
-        <Route path="/decode" element={<Decode />} />
+        <Route path="/encode" element={<EncodePage />} />
+        <Route path="/decode" element={<DecodePage />} />
       </Routes>
     </div>
   );
