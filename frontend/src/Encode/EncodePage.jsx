@@ -80,12 +80,13 @@ export default function EncodePage({ onBackToHome }) {
         >
           <BackLink onClick={onBackToHome} />
           <div
-            style={{
-              display: "grid",
-              gridTemplateColumns: "1fr 1fr",
-              gap: 20,
-              alignItems: "start",
-            }}
+            // style={{
+            //   display: "grid",
+            //   gridTemplateColumns: "1fr 1fr",
+            //   gap: 20,
+            //   alignItems: "start",
+            // }}
+            className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-center "
           >
             <div style={{ display: "flex", flexDirection: "column", gap: 18 }}>
               <ImageDropZone image={image} onImage={handleImage} />
