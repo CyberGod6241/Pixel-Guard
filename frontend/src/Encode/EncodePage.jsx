@@ -1,4 +1,4 @@
-import { useState, useCallback } from "react";
+import { useCallback } from "react";
 import EncodeBackground from "./EncodeBackground";
 import ImageDropZone from "./ImageDropZone";
 import MessageInput from "./MessageInput";
@@ -12,19 +12,28 @@ import PreviewPanel from "./PreviewPanel";
  * Props:
  *   onBackToHome  {() => void}  – navigates back to the landing page
  */
-export default function EncodePage({ onBackToHome }) {
-  const [image, setImage] = useState(null);
-  const [message, setMessage] = useState("");
-  const [progress, setProgress] = useState(0);
-  const [encoding, setEncoding] = useState(false);
-  const [done, setDone] = useState(false);
-
-  const handleImage = useCallback((file) => {
-    const url = URL.createObjectURL(file);
-    setImage({ url, name: file.name, file });
-    setProgress(0);
-    setDone(false);
-  }, []);
+export default function EncodePage({
+  onBackToHome,
+  image,
+  setImage,
+  message,
+  setMessage,
+  progress,
+  setProgress,
+  encoding,
+  setEncoding,
+  done,
+  setDone,
+}) {
+  const handleImage = useCallback(
+    (file) => {
+      const url = URL.createObjectURL(file);
+      setImage({ url, name: file.name, file });
+      setProgress(0);
+      setDone(false);
+    },
+    [setDone, setProgress, setImage],
+  );
 
   const handleEncode = () => {
     if (!image || !message.trim() || encoding) return;
