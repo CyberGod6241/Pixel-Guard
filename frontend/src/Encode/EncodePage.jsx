@@ -3,6 +3,7 @@ import EncodeBackground from "./EncodeBackground";
 import ImageDropZone from "./ImageDropZone";
 import MessageInput from "./MessageInput";
 import PreviewPanel from "./PreviewPanel";
+import axios from "axios";
 
 /**
  * EncodePage
@@ -35,7 +36,7 @@ export default function EncodePage({
     [setDone, setProgress, setImage],
   );
 
-  const handleEncode = () => {
+  const handleEncode = useCallback(async () => {
     if (!image || !message.trim() || encoding) return;
     if (done) {
       const a = document.createElement("a");
@@ -44,21 +45,85 @@ export default function EncodePage({
       a.click();
       return;
     }
+
     setEncoding(true);
     setDone(false);
-    setProgress(0);
-    let p = 0;
-    const interval = setInterval(() => {
-      p += Math.random() * 14 + 4;
-      if (p >= 100) {
-        p = 100;
-        clearInterval(interval);
+    setProgress(10);
+
+    try {
+      // Simulate upload progress
+      setProgress(25);
+      await new Promise((resolve) => setTimeout(resolve, 300));
+
+      // Create FormData with the actual image file
+      const formData = new FormData();
+      formData.append("image", image.file);
+      formData.append("message", message);
+
+      setProgress(40);
+
+      // Make the actual API call with timeout
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 120000); // 2 minute timeout
+
+      const response = await axios.post(
+        "http://localhost:8080/encode",
+        formData,
+        {
+          headers: {
+            "Content-Type": "multipart/form-data",
+          },
+          signal: controller.signal,
+          timeout: 120000,
+        },
+      );
+
+      clearTimeout(timeoutId);
+
+      setProgress(80);
+      const data = response.data;
+      console.log("Encoding success:", data);
+      console.log("Full response:", response);
+
+      // Update image with the stego version
+      if (data.path) {
+        const stegoImageUrl = `http://localhost:8080/uploads/${data.path}`;
+        console.log("Stego image URL:", stegoImageUrl);
+        setImage((prevImage) => ({ ...prevImage, url: stegoImageUrl }));
+      } else {
+        console.error("No path returned from server:", data);
+        alert("Server did not return image path");
         setEncoding(false);
-        setDone(true);
+        setDone(false);
+        setProgress(0);
+        return;
       }
-      setProgress(Math.min(Math.round(p), 100));
-    }, 120);
-  };
+
+      setProgress(100);
+      setEncoding(false);
+      setDone(true);
+    } catch (error) {
+      if (error.name === "AbortError") {
+        console.error("Encoding request timed out");
+        alert("Encoding took too long. Please try again.");
+      } else {
+        console.error("Error encoding image:", error);
+        alert(`Failed to encode image: ${error.message || "Unknown error"}`);
+      }
+      setEncoding(false);
+      setDone(false);
+      setProgress(0);
+    }
+  }, [
+    image,
+    message,
+    encoding,
+    done,
+    setImage,
+    setEncoding,
+    setDone,
+    setProgress,
+  ]);
 
   return (
     <div
