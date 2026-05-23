@@ -42,10 +42,10 @@ def encode():
 
       max_capacity = get_max_capacity(save_path)
       # Check if message fits (add buffer for your delimiter)
-      if len(message) + 10 > max_capacity: # +10 for the '#####' delimiter
+      if len(message) + 5 > max_capacity: # +5 for the '#####' delimiter
          os.remove(save_path)  # Clean up
-         return jsonify({"error": f"Message too long! Max allowed: {max_capacity - 10} characters."}), 400
-
+         return jsonify({"error": f"Message too long! Max allowed: {max_capacity - 5} characters."}), 400
+      
       blocks, width, height = split_image_into_blocks(save_path)
       encode_message_in_blocks(blocks, message)
       
@@ -102,7 +102,7 @@ def split_image_into_blocks(save_path):
             })
             
     print(f"Total 8x8 blocks created: {len(blocks)}")
-    return blocks, width, height
+    return blocks, new_width, new_height
 
 
 def encode_message_in_blocks(blocks, message):
@@ -184,6 +184,63 @@ def get_max_capacity(image_path):
     max_chars = total_bits // 8
     return max_chars
 
+def extract_message_from_image(image_path):
+    """Extract hidden message from a stego image"""
+    try:
+        img = Image.open(image_path)
+        width, height = img.size
+        
+        new_width = (width // 8) * 8
+        new_height = (height // 8) * 8
+        
+        print(f"Extracting from image size: {width}x{height}")
+        
+        # Extract all bits
+        extracted_bits = []
+        
+        for y in range(0, new_height, 8):
+            for x in range(0, new_width, 8):
+                # Crop the 8x8 block
+                box = (x, y, x + 8, y + 8)
+                block = img.crop(box)
+                
+                # Convert to RGB array
+                rgb_array = np.array(block.convert('RGB'), dtype=np.float32)
+                
+                # Extract from each channel
+                for i in range(3):
+                    channel = rgb_array[:, :, i]
+                    # Transform to frequency domain
+                    dct_coefficients = dctn(channel, norm='ortho')
+                    # Get the coefficient at [4, 4]
+                    value = dct_coefficients[4, 4]
+                    # Extract the least significant bit
+                    co_int = int(value)
+                    lsb = co_int & 1
+                    extracted_bits.append(str(lsb))
+        
+        # Convert bits back to characters
+        message = ""
+        for i in range(0, len(extracted_bits) - 7, 8):
+            byte_str = ''.join(extracted_bits[i:i+8])
+            char_code = int(byte_str, 2)
+            char = chr(char_code)
+            message += char
+            
+            # Check for delimiter
+            if message.endswith('#####'):
+                message = message[:-5]  # Remove the delimiter
+                print(f"Extracted message: {message}")
+                return message
+        
+        # If no delimiter found, the message might be corrupted or not steganographic
+        print(f"No delimiter found. Message might be corrupted.")
+        return None
+        
+    except Exception as e:
+        print(f"Error extracting message: {str(e)}")
+        return None
+
 @app.route('/health', methods=['GET'])
 def health():
    """Health check endpoint to verify server is running"""
@@ -196,9 +253,41 @@ def health():
 
 @app.route('/decode', methods=['POST'])
 def decode():
-   # This will be your endpoint to receive the modified image from React,
-   # run the decoding function, and return the hidden message back to React.
-   return {"status": "success", "message": "Decoding not implemented yet."}
+   """Decode hidden message from stego image"""
+   try:
+      file = request.files.get('image')
+      
+      if not file:
+         return jsonify({"status": "error", "message": "No image file provided"}), 400
+      
+      # Save the uploaded file temporarily
+      UPLOAD_FOLDER = 'uploads'
+      if not os.path.exists(UPLOAD_FOLDER):
+         os.makedirs(UPLOAD_FOLDER)
+      
+      filename = secure_filename(file.filename)
+      temp_path = os.path.join(UPLOAD_FOLDER, f"decode_temp_{filename}")
+      file.save(temp_path)
+      
+      try:
+         # Extract the hidden message
+         extracted_message = extract_message_from_image(temp_path)
+         
+         if extracted_message is None:
+            return jsonify({"status": "error", "message": "This file does not appear to contain steganographic data, or the data may be corrupted."}), 400
+         
+         return jsonify({
+            "status": "success",
+            "message": extracted_message
+         })
+      finally:
+         # Clean up temp file
+         if os.path.exists(temp_path):
+            os.remove(temp_path)
+   
+   except Exception as e:
+      print(f"Error in decode endpoint: {str(e)}")
+      return jsonify({"status": "error", "message": str(e)}), 500
 
 @app.route('/uploads/<path:filename>', methods=['GET'])
 def serve_upload(filename):
