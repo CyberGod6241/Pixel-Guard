@@ -4,6 +4,7 @@ import ImageDropZone from "./ImageDropZone";
 import MessageInput from "./MessageInput";
 import PreviewPanel from "./PreviewPanel";
 import axios from "axios";
+import { Link } from "react-router-dom";
 
 /**
  * EncodePage
@@ -39,10 +40,26 @@ export default function EncodePage({
   const handleEncode = useCallback(async () => {
     if (!image || !message.trim() || encoding) return;
     if (done) {
-      const a = document.createElement("a");
-      a.href = image.url;
-      a.download = `stego_${image.name}`;
-      a.click();
+      // Download the stego image from the server
+      axios({
+        method: "get",
+        url: image.url,
+        responseType: "blob",
+      })
+        .then((response) => {
+          const url = URL.createObjectURL(response.data);
+          const link = document.createElement("a");
+          link.href = url;
+          link.download = `stego_${image.name}`;
+          document.body.appendChild(link);
+          link.click();
+          document.body.removeChild(link);
+          URL.revokeObjectURL(url);
+        })
+        .catch((error) => {
+          console.error("Error downloading file:", error);
+          alert("Failed to download stego image");
+        });
       return;
     }
 
@@ -152,7 +169,9 @@ export default function EncodePage({
             padding: "28px 24px 40px",
           }}
         >
-          <BackLink onClick={onBackToHome} />
+          <Link to="/" style={{ textDecoration: "none" }}>
+            <BackLink />
+          </Link>
           <div
             // style={{
             //   display: "grid",
@@ -259,21 +278,25 @@ function EncodeNavbar({ onBackToHome }) {
         </span>
       </div>
       <div style={{ display: "flex", alignItems: "center", gap: 26 }}>
-        <button
-          onClick={onBackToHome}
-          style={{ ...link, color: "white" }}
-          onMouseEnter={(e) => (e.currentTarget.style.color = "#c9a84c")}
-          onMouseLeave={(e) => (e.currentTarget.style.color = "white")}
-        >
-          Home
-        </button>
-        <button
-          style={{ ...link, color: "#7a9ab8" }}
-          onMouseEnter={(e) => (e.currentTarget.style.color = "#c9a84c")}
-          onMouseLeave={(e) => (e.currentTarget.style.color = "#7a9ab8")}
-        >
-          About
-        </button>
+        <Link to="/" style={{ textDecoration: "none" }}>
+          <button
+            onClick={onBackToHome}
+            style={{ ...link, color: "white" }}
+            onMouseEnter={(e) => (e.currentTarget.style.color = "#c9a84c")}
+            onMouseLeave={(e) => (e.currentTarget.style.color = "white")}
+          >
+            Home
+          </button>
+        </Link>
+        <Link to="/encode" style={{ textDecoration: "none" }}>
+          <button
+            style={{ ...link, color: "#7a9ab8" }}
+            onMouseEnter={(e) => (e.currentTarget.style.color = "#c9a84c")}
+            onMouseLeave={(e) => (e.currentTarget.style.color = "#7a9ab8")}
+          >
+            About
+          </button>
+        </Link>
         <a
           href="#"
           aria-label="GitHub"

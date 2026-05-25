@@ -1,12 +1,10 @@
 import { useState, useCallback } from "react";
+import axios from "axios";
 import EncodeBackground from "../encode/EncodeBackground";
 import DecodeImageSelector from "./DecodeImageSelector";
 import ExtractedMessage from "./ExtractedMessage";
 import DecodeActionPanel from "./DecodeActionPanel";
-
-// Simulated hidden message for demo purposes
-const DEMO_MESSAGE =
-  "Hello World! This is a confidential message hidden using LSB steganography.\nThe quick brown fox jumps over the lazy dog.\n###";
+import { Link } from "react-router-dom";
 
 /**
  * DecodePage
@@ -16,7 +14,7 @@ const DEMO_MESSAGE =
  * Props:
  *   onBackToHome  {() => void}
  */
-export default function DecodePage({ onBackToHome }) {
+export default function DecodePage() {
   const [image, setImage] = useState(null); // { url, name, file }
   const [message, setMessage] = useState("");
   const [progress, setProgress] = useState(0);
@@ -34,22 +32,52 @@ export default function DecodePage({ onBackToHome }) {
     setTimestamp("");
   }, []);
 
-  const handleDecode = () => {
+  const handleDecode = useCallback(async () => {
     if (!image || decoding) return;
     setDecoding(true);
     setDone(false);
     setMessage("");
-    setProgress(0);
+    setProgress(10);
 
-    let p = 0;
-    const interval = setInterval(() => {
-      p += Math.random() * 13 + 4;
-      if (p >= 100) {
-        p = 100;
-        clearInterval(interval);
-        setDecoding(false);
+    try {
+      // Simulate initial progress
+      setProgress(25);
+      await new Promise((resolve) => setTimeout(resolve, 300));
+
+      // Create FormData with the image file
+      const formData = new FormData();
+      console.log("Image file:", image.file);
+      console.log("Image file type:", image.file?.type);
+      console.log("Image file size:", image.file?.size);
+
+      if (!image.file) {
+        throw new Error("No image file available");
+      }
+
+      formData.append("image", image.file);
+
+      setProgress(40);
+
+      // Make the API call to decode
+      const response = await axios.post(
+        "http://localhost:8080/decode",
+        formData,
+        {
+          headers: {
+            "Content-Type": "multipart/form-data",
+          },
+          timeout: 120000,
+        },
+      );
+
+      setProgress(80);
+      const data = response.data;
+      console.log("Decode response:", data);
+
+      if (data.status === "success" && data.message) {
+        setMessage(data.message);
+        setProgress(100);
         setDone(true);
-        setMessage(DEMO_MESSAGE);
         setTimestamp(
           new Date().toLocaleString("en-US", {
             weekday: "long",
@@ -61,10 +89,22 @@ export default function DecodePage({ onBackToHome }) {
             timeZoneName: "short",
           }),
         );
+      } else {
+        throw new Error(data.message || "Decoding failed");
       }
-      setProgress(Math.min(Math.round(p), 100));
-    }, 110);
-  };
+    } catch (error) {
+      console.error("Full error object:", error);
+      console.error("Error response:", error.response?.data);
+      console.error("Error decoding image:", error.message);
+      alert(
+        `Failed to decode image: ${error.response?.data?.message || error.message || "Unknown error"}`,
+      );
+      setMessage("");
+      setProgress(0);
+    } finally {
+      setDecoding(false);
+    }
+  }, [image, decoding]);
 
   // ── Render ─────────────────────────────────────────────────
   return (
@@ -77,7 +117,7 @@ export default function DecodePage({ onBackToHome }) {
       }}
     >
       <EncodeBackground />
-      <DecodeNavbar onBackToHome={onBackToHome} />
+      <DecodeNavbar />
 
       <div
         style={{
@@ -95,7 +135,9 @@ export default function DecodePage({ onBackToHome }) {
           }}
         >
           {/* Back link */}
-          <BackLink onClick={onBackToHome} />
+          <Link to="/" style={{ textDecoration: "none" }}>
+            <BackLink />
+          </Link>
 
           {/* Two-column grid */}
           <div
@@ -248,21 +290,25 @@ function DecodeNavbar({ onBackToHome }) {
         </span>
       </div>
       <div style={{ display: "flex", alignItems: "center", gap: 26 }}>
-        <button
-          onClick={onBackToHome}
-          style={{ ...link, color: "white" }}
-          onMouseEnter={(e) => (e.currentTarget.style.color = "#c9a84c")}
-          onMouseLeave={(e) => (e.currentTarget.style.color = "white")}
-        >
-          Home
-        </button>
-        <button
-          style={{ ...link, color: "#7a9ab8" }}
-          onMouseEnter={(e) => (e.currentTarget.style.color = "#c9a84c")}
-          onMouseLeave={(e) => (e.currentTarget.style.color = "#7a9ab8")}
-        >
-          About
-        </button>
+        <Link to="/" style={{ textDecoration: "none" }}>
+          <button
+            onClick={onBackToHome}
+            style={{ ...link, color: "white" }}
+            onMouseEnter={(e) => (e.currentTarget.style.color = "#c9a84c")}
+            onMouseLeave={(e) => (e.currentTarget.style.color = "white")}
+          >
+            Home
+          </button>
+        </Link>
+        <Link to="/" style={{ textDecoration: "none" }}>
+          <button
+            style={{ ...link, color: "#7a9ab8" }}
+            onMouseEnter={(e) => (e.currentTarget.style.color = "#c9a84c")}
+            onMouseLeave={(e) => (e.currentTarget.style.color = "#7a9ab8")}
+          >
+            About
+          </button>
+        </Link>
         <a
           href="#"
           aria-label="GitHub"
