@@ -1,6 +1,6 @@
 import { useState, useCallback } from "react";
 import axios from "axios";
-import EncodeBackground from "../encode/EncodeBackground";
+import EncodeBackground from "../Encode/EncodeBackground";
 import DecodeImageSelector from "./DecodeImageSelector";
 import ExtractedMessage from "./ExtractedMessage";
 import DecodeActionPanel from "./DecodeActionPanel";
