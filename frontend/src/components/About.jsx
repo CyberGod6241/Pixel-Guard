@@ -6,30 +6,35 @@ const TEAM = [
     role: "Backend & Frontend programmer",
     initials: "AO",
     color: "#c9a84c",
+    image: "https://avatars.githubusercontent.com/u/6241?v=4",
   },
   {
     name: "Dim Grace Ifeoma",
     role: "Project Manager",
     initials: "CE",
     color: "#7eb8d4",
+    image: "",
   },
   {
     name: "Olatunji Rene-divine",
     role: "UI/UX Design",
     initials: "FM",
     color: "#a78bfa",
+    image: "",
   },
   {
     name: "Afe Victor Oluwasegun",
     role: "Database & API Layer",
     initials: "EN",
     color: "#6ee7b7",
+    image: "",
   },
   {
     name: "Olayiwola Temitope Peter",
     role: "Testing & Documentation",
     initials: "NA",
     color: "#f9a8d4",
+    image: "",
   },
 ];
 
