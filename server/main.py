@@ -7,7 +7,13 @@ import numpy as np
 from scipy.fft import dctn, idctn
 import io
 import os
+import base64
 from werkzeug.utils import secure_filename # Cleans the filename for safety
+
+# Cryptography Imports for AES-256
+from cryptography.hazmat.primitives.kdf.pbkdf2 import PBKDF2HMAC
+from cryptography.hazmat.primitives import hashes
+from cryptography.hazmat.primitives.ciphers.aead import AESGCM
 
 app = Flask(__name__)
 cors = CORS(app, resources={
@@ -16,59 +22,54 @@ cors = CORS(app, resources={
     r"/uploads/*": {"origins": "*", "methods": ["GET", "OPTIONS"]}
 })
  # This allows your React app to talk to this API
+ 
+ # --- AES-256 Cryptographic Helpers ---
 
-@app.route('/encode', methods=['POST'])
-def encode():
-   try:
-      UPLOAD_FOLDER = 'uploads'
-      app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
+def derive_key(password: str, salt: bytes) -> bytes:
+    """Derive a 256-bit key from a user password using PBKDF2"""
+    kdf = PBKDF2HMAC(
+        algorithm=hashes.SHA256(),
+        length=32,
+        salt=salt,
+        iterations=100000,
+    )
+    return kdf.derive(password.encode())
+ 
+def encrypt_message(plaintext: str, password: str) -> str:
+    """Encrypt text using AES-256-GCM with a salt and nonce"""
+    salt = os.urandom(16)
+    key = derive_key(password, salt)
+    aesgcm = AESGCM(key)
+    nonce = os.urandom(12)
+    ciphertext = aesgcm.encrypt(nonce, plaintext.encode(), None)
+    
+    # Combine salt + nonce + ciphertext
+    combined = salt + nonce + ciphertext
+    return "AES:" + base64.b64encode(combined).decode('utf-8')
 
-      if not os.path.exists(UPLOAD_FOLDER):
-         os.makedirs(UPLOAD_FOLDER)
+def decrypt_message(encrypted_str: str, password: str) -> str:
+    """Decrypt AES-256-GCM encrypted payload"""
+    if not encrypted_str.startswith("AES:"):
+        return encrypted_str
+    
+    try:
+        b64_data = encrypted_str[4:]
+        data = base64.b64decode(b64_data)
+        salt = data[:16]
+        nonce = data[16:28]
+        ciphertext = data[28:]
+        
+        key = derive_key(password, salt)
+        aesgcm = AESGCM(key)
+        
+        decrypted = aesgcm.decrypt(nonce, ciphertext, None)
+        return decrypted.decode('utf-8')
+    except Exception:
+        raise ValueError("Incorrect password or corrupted ciphertext.")
+# --- Steganography Core Logic ---
+ 
 
-      # 1. Get image and text from React
-      file = request.files.get('image')
-      message = request.form.get('message')
-
-      if not file or not message:
-         return jsonify({"status": "error", "message": "Missing image or message"}), 400
-
-      # 2. Secure the name (prevents hackers from naming a file '../../config.sys')
-      filename = secure_filename(file.filename)
-      
-      # 3. Save the file to your 'uploads' folder
-      save_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
-      file.save(save_path)
-
-      max_capacity = get_max_capacity(save_path)
-      # Check if message fits (add buffer for your delimiter)
-      if len(message) + 5 > max_capacity: # +5 for the '#####' delimiter
-         os.remove(save_path)  # Clean up
-         return jsonify({"error": f"Message too long! Max allowed: {max_capacity - 5} characters."}), 400
-      
-      blocks, width, height = split_image_into_blocks(save_path)
-      encode_message_in_blocks(blocks, message)
-      
-      # Reconstruct image from modified blocks
-      stego_image = reconstruct_image_from_blocks(blocks, width, height)
-      
-      # Save the stego image as PNG for consistency
-      # Remove the original extension and add .png
-      name_without_ext = os.path.splitext(filename)[0]
-      stego_filename = f"stego_{name_without_ext}.png"
-      stego_path = os.path.join(app.config['UPLOAD_FOLDER'], stego_filename)
-      stego_image.save(stego_path, format='PNG')
-      
-      print(f"Image saved to: {save_path}")
-      print(f"Secret message to hide: {message}")
-      print(f"Stego image saved to: {stego_path}")
-      
-      return jsonify({"status": "success", "path": stego_filename})
-
-   except Exception as e:
-      print(f"Error in encode endpoint: {str(e)}")
-      return jsonify({"status": "error", "message": str(e)}), 500
-
+# ---Encoding ---
 
 #4 splitting images int 8x8 block 
 def split_image_into_blocks(save_path):
@@ -182,6 +183,8 @@ def encode_message_in_blocks(blocks, message):
     print(f"Total bits embedded: {bit_index}/{len(message_binary)}")
     return blocks
 
+
+# --- Decoding ---
 def reconstruct_image_from_blocks(blocks, original_width, original_height):
     """Reconstruct the full image from modified 8x8 blocks using direct pixel assignment"""
     # Create a full-size array to hold all pixels
@@ -302,6 +305,55 @@ def extract_message_from_image(image_path):
         print(f"Error extracting message: {str(e)}")
         return None
 
+# --- API Routes ---
+
+@app.route('/encode', methods=['POST'])
+def encode():
+    try:
+        UPLOAD_FOLDER = 'uploads'
+        app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
+
+        if not os.path.exists(UPLOAD_FOLDER):
+            os.makedirs(UPLOAD_FOLDER)
+
+        # 1. Get image, message, AND password from React
+        file = request.files.get('image')
+        message = request.form.get('message')
+        password = request.form.get('password')  # <--- ADDED
+
+        if not file or not message:
+            return jsonify({"status": "error", "message": "Missing image or message"}), 400
+
+        # 2. Encrypt message if password was provided
+        if password and password.strip():  # <--- ADDED
+            message = encrypt_message(message, password.strip())
+
+        filename = secure_filename(file.filename)
+        save_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+        file.save(save_path)
+
+        max_capacity = get_max_capacity(save_path)
+        if len(message) + 5 > max_capacity:
+            os.remove(save_path)
+            return jsonify({"error": f"Message too long! Max allowed: {max_capacity - 5} characters."}), 400
+        
+        blocks, width, height = split_image_into_blocks(save_path)
+        encode_message_in_blocks(blocks, message)
+        
+        stego_image = reconstruct_image_from_blocks(blocks, width, height)
+        
+        name_without_ext = os.path.splitext(filename)[0]
+        stego_filename = f"stego_{name_without_ext}.png"
+        stego_path = os.path.join(app.config['UPLOAD_FOLDER'], stego_filename)
+        stego_image.save(stego_path, format='PNG')
+        
+        return jsonify({"status": "success", "path": stego_filename})
+
+    except Exception as e:
+        print(f"Error in encode endpoint: {str(e)}")
+        return jsonify({"status": "error", "message": str(e)}), 500
+
+
 @app.route('/health', methods=['GET'])
 def health():
    """Health check endpoint to verify server is running"""
@@ -314,65 +366,54 @@ def health():
 
 @app.route('/decode', methods=['POST', 'OPTIONS'])
 def decode():
-   """Decode hidden message from stego image"""
-   # Handle CORS preflight
-   if request.method == 'OPTIONS':
-      return '', 204
-   
-   try:
-      print(f"Decode request received")
-      print(f"Request files: {request.files}")
-      print(f"Request form: {request.form}")
-      
-      file = request.files.get('image')
-      print(f"Image file retrieved: {file}")
-      
-      if not file:
-         print(f"No image file found in request")
-         print(f"Available files: {list(request.files.keys())}")
-         return jsonify({"status": "error", "message": "No image file provided. Make sure to send the file as 'image' field."}), 400
-      
-      print(f"File name: {file.filename}")
-      print(f"File size: {file.content_length}")
-      
-      # Save the uploaded file temporarily
-      UPLOAD_FOLDER = 'uploads'
-      if not os.path.exists(UPLOAD_FOLDER):
-         os.makedirs(UPLOAD_FOLDER)
-      
-      filename = secure_filename(file.filename)
-      if not filename:
-         return jsonify({"status": "error", "message": "Invalid filename"}), 400
-      
-      temp_path = os.path.join(UPLOAD_FOLDER, f"decode_temp_{filename}")
-      print(f"Saving file to: {temp_path}")
-      file.save(temp_path)
-      print(f"File saved successfully")
-      
-      try:
-         # Extract the hidden message
-         print(f"Starting extraction from {temp_path}")
-         extracted_message = extract_message_from_image(temp_path)
-         print(f"Extraction complete. Message: {extracted_message}")
-         
-         if extracted_message is None:
-            return jsonify({"status": "error", "message": "This file does not appear to contain steganographic data, or the data may be corrupted."}), 400
-         
-         return jsonify({
-            "status": "success",
-            "message": extracted_message
-         })
-      finally:
-         # Clean up temp file
-         if os.path.exists(temp_path):
-            os.remove(temp_path)
-            print(f"Temp file cleaned up")
-   
-   except Exception as e:
-      print(f"Error in decode endpoint: {str(e)}")
-      import traceback
-      traceback.print_exc()
-      return jsonify({"status": "error", "message": f"Server error: {str(e)}"}), 500
+    if request.method == 'OPTIONS':
+        return '', 204
+    
+    try:
+        file = request.files.get('image')
+        password = request.form.get('password')  # <--- ADDED
+        
+        if not file:
+            return jsonify({"status": "error", "message": "No image file provided."}), 400
+        
+        UPLOAD_FOLDER = 'uploads'
+        if not os.path.exists(UPLOAD_FOLDER):
+            os.makedirs(UPLOAD_FOLDER)
+        
+        filename = secure_filename(file.filename)
+        if not filename:
+            return jsonify({"status": "error", "message": "Invalid filename"}), 400
+        
+        temp_path = os.path.join(UPLOAD_FOLDER, f"decode_temp_{filename}")
+        file.save(temp_path)
+        
+        try:
+            extracted_message = extract_message_from_image(temp_path)
+            
+            if extracted_message is None:
+                return jsonify({"status": "error", "message": "No steganographic data found."}), 400
+            
+            # Check if extracted text is AES encrypted
+            if extracted_message.startswith("AES:"):  # <--- ADDED
+                if not password or not password.strip():
+                    return jsonify({"status": "error", "message": "This image is password-protected. Please enter a password."}), 400
+                
+                try:
+                    extracted_message = decrypt_message(extracted_message, password.strip())
+                except ValueError:
+                    return jsonify({"status": "error", "message": "Decryption failed! Incorrect password."}), 400
+            
+            return jsonify({
+                "status": "success",
+                "message": extracted_message
+            })
+        finally:
+            if os.path.exists(temp_path):
+                os.remove(temp_path)
+    
+    except Exception as e:
+        print(f"Error in decode endpoint: {str(e)}")
+        return jsonify({"status": "error", "message": f"Server error: {str(e)}"}), 500
 
 @app.route('/uploads/<path:filename>', methods=['GET'])
 def serve_upload(filename):

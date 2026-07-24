@@ -1,4 +1,4 @@
-import { useCallback } from "react";
+import { useCallback, useState } from "react";
 import EncodeBackground from "./EncodeBackground";
 import ImageDropZone from "./ImageDropZone";
 import MessageInput from "./MessageInput";
@@ -6,27 +6,21 @@ import PreviewPanel from "./PreviewPanel";
 import axios from "axios";
 import { Link } from "react-router-dom";
 
+const API_BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:8080";
+
 /**
  * EncodePage
  * Orchestrates the encode flow. Owns all shared state and passes
  * derived values + callbacks down to the individual encode components.
- *
- * Props:
- *   onBackToHome  {() => void}  – navigates back to the landing page
  */
-export default function EncodePage({
-  onBackToHome,
-  image,
-  setImage,
-  message,
-  setMessage,
-  progress,
-  setProgress,
-  encoding,
-  setEncoding,
-  done,
-  setDone,
-}) {
+export default function EncodePage() {
+  const [image, setImage] = useState(null);
+  const [message, setMessage] = useState("");
+  const [password, setPassword] = useState(""); // <--- ADDED: Password State
+  const [progress, setProgress] = useState(0);
+  const [encoding, setEncoding] = useState(false);
+  const [done, setDone] = useState(false);
+
   const handleImage = useCallback(
     (file) => {
       const url = URL.createObjectURL(file);
@@ -72,10 +66,11 @@ export default function EncodePage({
       setProgress(25);
       await new Promise((resolve) => setTimeout(resolve, 300));
 
-      // Create FormData with the actual image file
+      // Create FormData with image, message, AND password
       const formData = new FormData();
       formData.append("image", image.file);
       formData.append("message", message);
+      formData.append("password", password); // <--- ADDED: Send password to backend
 
       setProgress(40);
 
@@ -83,28 +78,23 @@ export default function EncodePage({
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), 120000); // 2 minute timeout
 
-      const response = await axios.post(
-        "http://localhost:8080/encode",
-        formData,
-        {
-          headers: {
-            "Content-Type": "multipart/form-data",
-          },
-          signal: controller.signal,
-          timeout: 120000,
+      const response = await axios.post(`${API_BASE_URL}/encode`, formData, {
+        headers: {
+          "Content-Type": "multipart/form-data",
         },
-      );
+        signal: controller.signal,
+        timeout: 120000,
+      });
 
       clearTimeout(timeoutId);
 
       setProgress(80);
       const data = response.data;
       console.log("Encoding success:", data);
-      console.log("Full response:", response);
 
       // Update image with the stego version
       if (data.path) {
-        const stegoImageUrl = `http://localhost:8080/uploads/${data.path}`;
+        const stegoImageUrl = `${API_BASE_URL}/uploads/${data.path}`;
         console.log("Stego image URL:", stegoImageUrl);
         setImage((prevImage) => ({ ...prevImage, url: stegoImageUrl }));
       } else {
@@ -125,7 +115,9 @@ export default function EncodePage({
         alert("Encoding took too long. Please try again.");
       } else {
         console.error("Error encoding image:", error);
-        alert(`Failed to encode image: ${error.message || "Unknown error"}`);
+        alert(
+          `Failed to encode image: ${error.response?.data?.message || error.message || "Unknown error"}`,
+        );
       }
       setEncoding(false);
       setDone(false);
@@ -134,6 +126,7 @@ export default function EncodePage({
   }, [
     image,
     message,
+    password, // <--- ADDED: Include password in dependencies
     encoding,
     done,
     setImage,
@@ -152,7 +145,7 @@ export default function EncodePage({
       }}
     >
       <EncodeBackground />
-      <EncodeNavbar onBackToHome={onBackToHome} />
+      <EncodeNavbar />
 
       <div
         style={{
@@ -172,18 +165,17 @@ export default function EncodePage({
           <Link to="/" style={{ textDecoration: "none" }}>
             <BackLink />
           </Link>
-          <div
-            // style={{
-            //   display: "grid",
-            //   gridTemplateColumns: "1fr 1fr",
-            //   gap: 20,
-            //   alignItems: "start",
-            // }}
-            className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-center "
-          >
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-center">
             <div style={{ display: "flex", flexDirection: "column", gap: 18 }}>
               <ImageDropZone image={image} onImage={handleImage} />
-              <MessageInput message={message} onChange={setMessage} />
+
+              {/* Pass password and setPassword down to MessageInput */}
+              <MessageInput
+                message={message}
+                onChange={setMessage}
+                password={password}
+                onPasswordChange={setPassword}
+              />
             </div>
             <PreviewPanel
               image={image}

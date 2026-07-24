@@ -1,36 +1,48 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import axios from "axios";
+import { Link } from "react-router-dom";
 import EncodeBackground from "../Encode/EncodeBackground";
 import DecodeImageSelector from "./DecodeImageSelector";
 import ExtractedMessage from "./ExtractedMessage";
 import DecodeActionPanel from "./DecodeActionPanel";
-import { Link } from "react-router-dom";
 
-/**
- * DecodePage
- * Orchestrates the decode flow. Owns all shared state and coordinates
- * DecodeImageSelector, ExtractedMessage, and DecodeActionPanel.
- *
- * Props:
- *   onBackToHome  {() => void}
- */
+const API_BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:8080";
+
 export default function DecodePage() {
   const [image, setImage] = useState(null); // { url, name, file }
+  const [password, setPassword] = useState(""); // 1. Added password state
   const [message, setMessage] = useState("");
   const [progress, setProgress] = useState(0);
   const [decoding, setDecoding] = useState(false);
   const [done, setDone] = useState(false);
   const [timestamp, setTimestamp] = useState("");
 
+  // Clean up Object URL when image state changes or component unmounts
+  useEffect(() => {
+    return () => {
+      if (image?.url) {
+        URL.revokeObjectURL(image.url);
+      }
+    };
+  }, [image?.url]);
+
   // ── Handlers ──────────────────────────────────────────────
-  const handleImage = useCallback((file) => {
-    const url = URL.createObjectURL(file);
-    setImage({ url, name: file.name, file });
-    setMessage("");
-    setProgress(0);
-    setDone(false);
-    setTimestamp("");
-  }, []);
+  const handleImage = useCallback(
+    (file) => {
+      if (image?.url) {
+        URL.revokeObjectURL(image.url);
+      }
+
+      const url = URL.createObjectURL(file);
+      setImage({ url, name: file.name, file });
+      setMessage("");
+      setPassword(""); // Reset password on new image selection
+      setProgress(0);
+      setDone(false);
+      setTimestamp("");
+    },
+    [image?.url],
+  );
 
   const handleDecode = useCallback(async () => {
     if (!image || decoding) return;
@@ -40,39 +52,31 @@ export default function DecodePage() {
     setProgress(10);
 
     try {
-      // Simulate initial progress
       setProgress(25);
       await new Promise((resolve) => setTimeout(resolve, 300));
-
-      // Create FormData with the image file
-      const formData = new FormData();
-      console.log("Image file:", image.file);
-      console.log("Image file type:", image.file?.type);
-      console.log("Image file size:", image.file?.size);
 
       if (!image.file) {
         throw new Error("No image file available");
       }
 
+      // 2. Append image and optional password to FormData
+      const formData = new FormData();
       formData.append("image", image.file);
+      if (password.trim()) {
+        formData.append("password", password.trim());
+      }
 
       setProgress(40);
 
-      // Make the API call to decode
-      const response = await axios.post(
-        "http://localhost:8080/decode",
-        formData,
-        {
-          headers: {
-            "Content-Type": "multipart/form-data",
-          },
-          timeout: 120000,
+      const response = await axios.post(`${API_BASE_URL}/decode`, formData, {
+        headers: {
+          "Content-Type": "multipart/form-data",
         },
-      );
+        timeout: 120000,
+      });
 
       setProgress(80);
       const data = response.data;
-      console.log("Decode response:", data);
 
       if (data.status === "success" && data.message) {
         setMessage(data.message);
@@ -93,18 +97,18 @@ export default function DecodePage() {
         throw new Error(data.message || "Decoding failed");
       }
     } catch (error) {
-      console.error("Full error object:", error);
-      console.error("Error response:", error.response?.data);
-      console.error("Error decoding image:", error.message);
+      console.error("Error decoding image:", error);
       alert(
-        `Failed to decode image: ${error.response?.data?.message || error.message || "Unknown error"}`,
+        `Failed to decode image: ${
+          error.response?.data?.message || error.message || "Unknown error"
+        }`,
       );
       setMessage("");
       setProgress(0);
     } finally {
       setDecoding(false);
     }
-  }, [image, decoding]);
+  }, [image, password, decoding]);
 
   // ── Render ─────────────────────────────────────────────────
   return (
@@ -135,20 +139,10 @@ export default function DecodePage() {
           }}
         >
           {/* Back link */}
-          <Link to="/" style={{ textDecoration: "none" }}>
-            <BackLink />
-          </Link>
+          <BackLink />
 
           {/* Two-column grid */}
-          <div
-            // style={{
-            //   display: "grid",
-            //   gridTemplateColumns: "1fr 1fr",
-            //   gap: 20,
-            //   alignItems: "start",
-            // }}
-            className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-center "
-          >
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-start">
             {/* Left column */}
             <div style={{ display: "flex", flexDirection: "column", gap: 18 }}>
               {/* Step 1 — image picker */}
@@ -156,8 +150,33 @@ export default function DecodePage() {
                 <DecodeImageSelector image={image} onImage={handleImage} />
               </SectionPanel>
 
-              {/* Step 2 — extracted message */}
-              <SectionPanel title="2. Extracted Secret Message">
+              {/* 3. Password Input Section */}
+              <SectionPanel title="2. Decryption Key (If Encrypted)">
+                <input
+                  type="password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  placeholder="Enter password if message was encrypted..."
+                  style={{
+                    width: "100%",
+                    background: "rgba(6, 12, 26, 0.8)",
+                    border: "1px solid rgba(201, 168, 76, 0.2)",
+                    borderRadius: 8,
+                    padding: "10px 14px",
+                    color: "white",
+                    fontSize: 14,
+                    outline: "none",
+                    boxSizing: "border-box",
+                  }}
+                  onFocus={(e) => (e.target.style.borderColor = "#c9a84c")}
+                  onBlur={(e) =>
+                    (e.target.style.borderColor = "rgba(201, 168, 76, 0.2)")
+                  }
+                />
+              </SectionPanel>
+
+              {/* Step 3 — extracted message */}
+              <SectionPanel title="3. Extracted Secret Message">
                 <ExtractedMessage
                   message={message}
                   decoding={decoding}
@@ -199,7 +218,6 @@ export default function DecodePage() {
 
 /* ── Page-local sub-components ─────────────────────────────── */
 
-/** Thin frosted-glass card wrapper (mirrors EncodePanel visually) */
 function SectionPanel({ title, children }) {
   return (
     <div
@@ -227,16 +245,7 @@ function SectionPanel({ title, children }) {
   );
 }
 
-function DecodeNavbar({ onBackToHome }) {
-  const link = {
-    background: "none",
-    border: "none",
-    cursor: "pointer",
-    fontSize: 13,
-    fontWeight: 500,
-    padding: 0,
-    transition: "color 0.2s",
-  };
+function DecodeNavbar() {
   return (
     <nav
       style={{
@@ -290,37 +299,38 @@ function DecodeNavbar({ onBackToHome }) {
         </span>
       </div>
       <div style={{ display: "flex", alignItems: "center", gap: 26 }}>
-        <Link to="/" style={{ textDecoration: "none" }}>
-          <button
-            onClick={onBackToHome}
-            style={{ ...link, color: "white" }}
-            onMouseEnter={(e) => (e.currentTarget.style.color = "#c9a84c")}
-            onMouseLeave={(e) => (e.currentTarget.style.color = "white")}
-          >
-            Home
-          </button>
+        <Link
+          to="/"
+          style={{
+            color: "white",
+            textDecoration: "none",
+            fontSize: 13,
+            fontWeight: 500,
+            transition: "color 0.2s",
+          }}
+          onMouseEnter={(e) => (e.currentTarget.style.color = "#c9a84c")}
+          onMouseLeave={(e) => (e.currentTarget.style.color = "white")}
+        >
+          Home
         </Link>
       </div>
     </nav>
   );
 }
 
-function BackLink({ onClick }) {
+function BackLink() {
   return (
-    <button
-      onClick={onClick}
+    <Link
+      to="/"
       style={{
-        display: "flex",
+        display: "inline-flex",
         alignItems: "center",
         gap: 6,
-        background: "none",
-        border: "none",
-        cursor: "pointer",
+        textDecoration: "none",
         color: "#7a9ab8",
         fontSize: 13,
         fontWeight: 500,
         marginBottom: 28,
-        padding: 0,
         transition: "color 0.2s",
       }}
       onMouseEnter={(e) => (e.currentTarget.style.color = "#c9a84c")}
@@ -341,6 +351,6 @@ function BackLink({ onClick }) {
         />
       </svg>
       Back to Home
-    </button>
+    </Link>
   );
 }
