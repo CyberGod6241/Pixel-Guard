@@ -1,4 +1,5 @@
 import EncodePanel from "./EncodePanel";
+import PasswordInput from "../Decode/PasswordInput"; // Import PasswordInput component
 
 const MAX_CHARS = 500;
 
@@ -12,7 +13,13 @@ const MAX_CHARS = 500;
  *   message    {string}
  *   onChange   {(value: string) => void}
  */
-export default function MessageInput({ message, onChange }) {
+export default function MessageInput({
+  message,
+  onChange,
+  password,
+  onPasswordChange,
+  disabled = false,
+}) {
   const handleChange = (e) => {
     onChange(e.target.value.slice(0, MAX_CHARS));
   };
@@ -60,6 +67,31 @@ export default function MessageInput({ message, onChange }) {
         >
           {message.length}/{MAX_CHARS}
         </span>
+
+        {/* Password Area */}
+        <div style={{ marginTop: 20 }}>
+          <h3
+            style={{
+              fontSize: 14,
+              fontWeight: 600,
+              color: "#c9a84c",
+              marginBottom: 6,
+            }}
+          >
+            Encryption Password (Optional)
+          </h3>
+          <p style={{ fontSize: 12, color: "#7a9ab8", marginBottom: 10 }}>
+            If set, the recipient will need this exact password to extract the
+            message.
+          </p>
+
+          <PasswordInput
+            value={password}
+            onChange={(e) => onPasswordChange(e.target.value)}
+            disabled={disabled}
+            placeholder="Enter encryption key..."
+          />
+        </div>
       </div>
     </EncodePanel>
   );

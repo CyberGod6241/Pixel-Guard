@@ -5,6 +5,7 @@ import EncodeBackground from "../Encode/EncodeBackground";
 import DecodeImageSelector from "./DecodeImageSelector";
 import ExtractedMessage from "./ExtractedMessage";
 import DecodeActionPanel from "./DecodeActionPanel";
+import PasswordInput from "./PasswordInput";
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:8080";
 
@@ -151,7 +152,7 @@ export default function DecodePage() {
               </SectionPanel>
 
               {/* 3. Password Input Section */}
-              <SectionPanel title="2. Decryption Key (If Encrypted)">
+              {/* <SectionPanel title="2. Decryption Key (If Encrypted)">
                 <input
                   type="password"
                   value={password}
@@ -172,6 +173,19 @@ export default function DecodePage() {
                   onBlur={(e) =>
                     (e.target.style.borderColor = "rgba(201, 168, 76, 0.2)")
                   }
+                />
+              </SectionPanel> */}
+              <SectionPanel title="2. Decryption Key (Optional)">
+                <p style={{ fontSize: 12, color: "#7a9ab8", marginBottom: 12 }}>
+                  Leave empty if the embedded message wasn't encrypted with a
+                  password.
+                </p>
+
+                <PasswordInput
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  disabled={decoding}
+                  placeholder="Enter password to decrypt..."
                 />
               </SectionPanel>
 
