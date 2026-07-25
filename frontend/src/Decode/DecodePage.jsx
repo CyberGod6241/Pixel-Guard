@@ -6,8 +6,9 @@ import DecodeImageSelector from "./DecodeImageSelector";
 import ExtractedMessage from "./ExtractedMessage";
 import DecodeActionPanel from "./DecodeActionPanel";
 import PasswordInput from "./PasswordInput";
+import AlertCard from "./AlertCard";
 
-const API_BASE_URL = import.meta.env.VITE_API_URL;
+const API_BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:8080";
 
 export default function DecodePage() {
   const [image, setImage] = useState(null); // { url, name, file }
@@ -17,6 +18,7 @@ export default function DecodePage() {
   const [decoding, setDecoding] = useState(false);
   const [done, setDone] = useState(false);
   const [timestamp, setTimestamp] = useState("");
+  const [error, setError] = useState(null); // 2. Added error state
 
   // Clean up Object URL when image state changes or component unmounts
   useEffect(() => {
@@ -49,6 +51,7 @@ export default function DecodePage() {
     if (!image || decoding) return;
     setDecoding(true);
     setDone(false);
+    setError(null);
     setMessage("");
     setProgress(10);
 
@@ -80,6 +83,7 @@ export default function DecodePage() {
       const data = response.data;
 
       if (data.status === "success" && data.message) {
+        setError(null);
         setMessage(data.message);
         setProgress(100);
         setDone(true);
@@ -99,11 +103,12 @@ export default function DecodePage() {
       }
     } catch (error) {
       console.error("Error decoding image:", error);
-      alert(
-        `Failed to decode image: ${
-          error.response?.data?.message || error.message || "Unknown error"
-        }`,
-      );
+      // alert(
+      //   `Failed to decode image: ${
+      //     error.response?.data?.message || error.message || "Unknown error"
+      //   }`,
+      // );
+      setError(error); // Set the error state
       setMessage("");
       setProgress(0);
     } finally {
@@ -123,7 +128,11 @@ export default function DecodePage() {
     >
       <EncodeBackground />
       <DecodeNavbar />
-
+      <AlertCard
+        error={error}
+        title="Decode failed"
+        onClose={() => setError(null)}
+      />
       <div
         style={{
           position: "relative",
@@ -211,7 +220,6 @@ export default function DecodePage() {
           </div>
         </div>
       </div>
-
       <footer
         style={{
           position: "relative",

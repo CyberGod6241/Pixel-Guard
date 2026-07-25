@@ -5,8 +5,9 @@ import EncodeBackground from "./EncodeBackground";
 import ImageDropZone from "./ImageDropZone";
 import MessageInput from "./MessageInput";
 import PreviewPanel from "./PreviewPanel";
+import AlertCard from "../Decode/AlertCard";
 
-const API_BASE_URL = import.meta.env.VITE_API_URL;
+const API_BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:8080";
 
 export default function EncodePage() {
   const [image, setImage] = useState(null); // { url, name, file }
@@ -15,6 +16,7 @@ export default function EncodePage() {
   const [progress, setProgress] = useState(0);
   const [encoding, setEncoding] = useState(false);
   const [done, setDone] = useState(false);
+  const [error, setError] = useState(null);
 
   // Clean up Object URL memory when image changes or component unmounts
   useEffect(() => {
@@ -69,6 +71,7 @@ export default function EncodePage() {
 
     setEncoding(true);
     setDone(false);
+    setError(null);
     setProgress(10);
 
     try {
@@ -99,6 +102,7 @@ export default function EncodePage() {
       const data = response.data;
 
       if (data.path) {
+        setError(null);
         const stegoImageUrl = `${API_BASE_URL}/uploads/${data.path}`;
         setImage((prevImage) => ({ ...prevImage, url: stegoImageUrl }));
       } else {
@@ -109,11 +113,7 @@ export default function EncodePage() {
       setDone(true);
     } catch (error) {
       console.error("Error encoding image:", error);
-      alert(
-        `Failed to encode image: ${
-          error.response?.data?.message || error.message || "Unknown error"
-        }`,
-      );
+      setError(error);
       setProgress(0);
       setDone(false);
     } finally {
@@ -133,6 +133,11 @@ export default function EncodePage() {
     >
       <EncodeBackground />
       <EncodeNavbar />
+      <AlertCard
+        error={error}
+        title="Encode failed"
+        onClose={() => setError(null)}
+      />
 
       <div
         style={{
