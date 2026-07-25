@@ -7,7 +7,7 @@ const AlertCard = ({ error, title = "Something went wrong", onClose }) => {
     error.response?.data?.message || error.message || "Unknown error";
 
   return (
-    <div className="relative z-[60] flex justify-center px-4 pt-4 sm:px-6">
+    <div className="fixed right-5 left-5 z-[60] flex justify-center px-4 pt-4 sm:px-6">
       <div
         role="alert"
         className="flex w-full max-w-xl items-center justify-between rounded-xl border border-red-500/20 bg-[#0f172a]/95 px-4 py-3 shadow-lg backdrop-blur"
