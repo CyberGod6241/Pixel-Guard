@@ -1,13 +1,13 @@
 
 
-from flask import Flask, request, send_file, jsonify
+import os
+import io
+import base64
+from flask import Flask, request, send_file, send_from_directory, jsonify
 from flask_cors import CORS
 from PIL import Image
 import numpy as np
 from scipy.fft import dctn, idctn
-import io
-import os
-import base64
 from werkzeug.utils import secure_filename # Cleans the filename for safety
 
 # Cryptography Imports for AES-256
@@ -16,11 +16,21 @@ from cryptography.hazmat.primitives import hashes
 from cryptography.hazmat.primitives.ciphers.aead import AESGCM
 
 app = Flask(__name__)
-cors = CORS(app, resources={
-    r"/encode": {"origins": "*", "methods": ["POST", "OPTIONS"]},
-    r"/decode": {"origins": "*", "methods": ["POST", "OPTIONS"]},
-    r"/uploads/*": {"origins": "*", "methods": ["GET", "OPTIONS"]}
+
+# Ensure upload directory exists on app load
+UPLOAD_FOLDER = os.path.join(os.getcwd(), 'uploads')
+os.makedirs(UPLOAD_FOLDER, exist_ok=True)
+app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
+
+# Configure CORS - allow requests from any origin or set FRONTEND_URL in env
+FRONTEND_URL = os.environ.get("FRONTEND_URL", "*")
+CORS(app, resources={
+    r"/encode": {"origins": FRONTEND_URL, "methods": ["POST", "OPTIONS"]},
+    r"/decode": {"origins": FRONTEND_URL, "methods": ["POST", "OPTIONS"]},
+    r"/uploads/*": {"origins": FRONTEND_URL, "methods": ["GET", "OPTIONS"]},
+    r"/health": {"origins": "*", "methods": ["GET"]}
 })
+
  # This allows your React app to talk to this API
  
  # --- AES-256 Cryptographic Helpers ---
@@ -417,57 +427,9 @@ def decode():
 
 @app.route('/uploads/<path:filename>', methods=['GET'])
 def serve_upload(filename):
-   """Serve uploaded and encoded images"""
-   try:
-      secure_name = secure_filename(filename)
-      # Use absolute path to avoid issues on Windows
-      file_path = os.path.abspath(os.path.join('uploads', secure_name))
-      print(f"Attempting to serve: {file_path}")
-      print(f"File exists: {os.path.exists(file_path)}")
-      
-      if not os.path.exists(file_path):
-         print(f"File not found: {file_path}")
-         return jsonify({"error": f"File not found: {file_path}"}), 404
-      
-      # Determine mimetype based on file extension
-      _, ext = os.path.splitext(file_path)
-      ext = ext.lower()
-      
-      mimetype_map = {
-         '.png': 'image/png',
-         '.jpg': 'image/jpeg',
-         '.jpeg': 'image/jpeg',
-         '.webp': 'image/webp',
-         '.gif': 'image/gif'
-      }
-      
-      mimetype = mimetype_map.get(ext, 'image/png')
-      
-      # Read file and serve using BytesIO to avoid path encoding issues on Windows
-      with open(file_path, 'rb') as f:
-         file_data = f.read()
-      
-      return send_file(
-         io.BytesIO(file_data),
-         mimetype=mimetype,
-         as_attachment=False,
-         download_name=secure_name
-      )
-   except Exception as e:
-      print(f"Error serving file: {str(e)}")
-      return jsonify({"error": str(e)}), 500
+    """Serve encoded stego images safely using Flask's send_from_directory"""
+    return send_from_directory(app.config['UPLOAD_FOLDER'], filename)
 
 if __name__ == '__main__':
-   # Ensure uploads folder exists on startup
-   UPLOAD_FOLDER = 'uploads'
-   if not os.path.exists(UPLOAD_FOLDER):
-      os.makedirs(UPLOAD_FOLDER)
-      print(f"Created uploads folder at: {os.path.abspath(UPLOAD_FOLDER)}")
-   else:
-      print(f"Uploads folder exists at: {os.path.abspath(UPLOAD_FOLDER)}")
-      # List existing files
-      files = os.listdir(UPLOAD_FOLDER)
-      print(f"Existing files: {files}")
-   
-   print("Starting Flask server on http://localhost:8080")
-   app.run(debug=True, port=8080)
+    port = int(os.environ.get("PORT", 8080))
+    app.run(host='0.0.0.0', port=port)
