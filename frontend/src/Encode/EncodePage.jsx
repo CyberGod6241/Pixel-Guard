@@ -7,7 +7,7 @@ import MessageInput from "./MessageInput";
 import PreviewPanel from "./PreviewPanel";
 import AlertCard from "../Decode/AlertCard";
 
-const API_BASE_URL = "https://pixel-guard-1.onrender.com/";
+const API_BASE_URL = "https://pixel-guard-1.onrender.com";
 
 export default function EncodePage() {
   const [image, setImage] = useState(null); // { url, name, file }
