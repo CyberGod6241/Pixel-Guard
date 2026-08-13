@@ -8,7 +8,7 @@ import DecodeActionPanel from "./DecodeActionPanel";
 import PasswordInput from "./PasswordInput";
 import AlertCard from "./AlertCard";
 
-const API_BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:8080";
+const API_BASE_URL = "https://pixel-guard-1.onrender.com";
 
 export default function DecodePage() {
   const [image, setImage] = useState(null); // { url, name, file }
