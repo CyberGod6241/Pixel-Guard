@@ -317,6 +317,20 @@ def extract_message_from_image(image_path):
 
 # --- API Routes ---
 
+
+# ---- Default route for health check and basic info ----
+@app.route('/', methods=['GET'])
+def index():
+    return jsonify({
+        "status": "online",
+        "message": "Steganography API is running.",
+        "endpoints": {
+            "health": "/health",
+            "encode": "/encode (POST)",
+            "decode": "/decode (POST)"
+        }
+    }), 200
+
 @app.route('/encode', methods=['POST'])
 def encode():
     try:
